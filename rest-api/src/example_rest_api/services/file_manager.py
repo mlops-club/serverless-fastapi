@@ -58,7 +58,7 @@ class FileManagerService(IService):
         directory_path: str = make_s3_path(s3_object_prefix=self._s3_object_prefix, path=directory_path)
         object_fpaths: List[str] = list_object_paths_in_s3_bucket(
             bucket_name=self._s3_bucket_name,
-            object_key=directory_path,
+            object_prefix=directory_path,
             s3_client=self._s3_client,
         )
         object_fpaths_without_prefix: List[str] = strip_prefix_from_list_items(

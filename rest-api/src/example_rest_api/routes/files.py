@@ -83,8 +83,8 @@ def delete_file(path: str, request: Request):
 
 
 @ROUTER.get(
-    "/files/{directory_path}",
-    response_class=PlainTextResponse,
+    "/files/",
+    response_model=ListFilesResponse,
     responses={
         HTTP_200_OK: make_apidocs_responses_obj_for_content_type(
             content_type="application/json",

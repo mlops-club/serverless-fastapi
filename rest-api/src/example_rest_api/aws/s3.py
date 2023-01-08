@@ -115,7 +115,11 @@ def list_object_paths_in_s3_bucket(
     list_objects_response: "ListObjectsV2OutputTypeDef" = list_objects_in_s3_bucket(
         bucket_name=bucket_name, object_prefix=object_prefix, s3_client=s3_client
     )
-    object_paths: list[str] = [obj["Key"] for obj in list_objects_response["Contents"]]
+
+    if "Contents" in list_objects_response.keys():
+        object_paths: list[str] = [obj["Key"] for obj in list_objects_response["Contents"]]
+    else:
+        object_paths = []
 
     return object_paths
 
