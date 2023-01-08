@@ -1,0 +1,20 @@
+node_modules/
+!/.gitattributes
+!/.projen/tasks.json
+!/.projen/deps.json
+!/.projen/files.json
+!/pyproject.toml
+!/setup.cfg
+!/setup.py
+*.env
+*venv
+*.venv
+*pyc*
+dist
+build
+*.whl
+*egg-info
+
+# ignore the generated static site; this folder is generated from the
+# minecraft-platform-frontend-poc/ package in the root of the project
+src/cdk_minecraft/resources/minecraft-platform-frontend-static

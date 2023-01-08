@@ -1,0 +1,35 @@
+install:
+	pip install -e .[all]
+
+run:
+	provision_minecraft_server__state_machine__arn=abc \
+	uvicorn "minecraft_paas_api.main:create_default_app" --reload --factory --workers 1 --host 0.0.0.0 --port 8000
+
+test:
+	pytest tests/ \
+		--cov src/ \
+		--cov-report term-missing \
+		--cov-report html \
+		--cov-report xml \
+		--junitxml=./test-reports/junit.xml
+
+	# equivalent of 'python -m doctest src/**/*.py docs/**/*.rst'
+	python -m doctest $(find src -name "*.py")
+	# python -m doctest $(find docs -name "*.rst")
+
+fetch-id-token:
+	#!/usr/bin/env python3
+
+	import requests
+
+	CLIENT_ID = "3j7rkgete6i4erp2fhaulae3nt"
+	CLIENT_SECRET = "197260bg7nl54nbiekalna1iq6e4sf44ihcqrqh8t00q8d2uhs1p"
+	COGNITO_TOKEN_ENDPOINT = "https://minecraft-user-pool.auth.us-west-2.amazoncognito.com/oauth2/token"
+
+	def get_access_token():
+		body = {"grant_type": "client_credentials", "scope": []}
+		headers = {"Content-Type": "application/x-www-form-urlencoded"}
+		response = requests.post(url=COGNITO_TOKEN_ENDPOINT, data=body, auth=(CLIENT_ID, CLIENT_SECRET), headers=headers)
+		return response.json()
+
+	print(get_access_token())
