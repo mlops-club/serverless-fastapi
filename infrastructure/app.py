@@ -16,7 +16,7 @@ APP = App()
 
 ServerlessFastAPIStack(
     scope=APP,
-    id="serverless-fastapi",
+    construct_id="serverless-fastapi",
     # we don't have a frontend (yet)
     frontend_cors_url="ericriddoch.info",
     login_page_domain_prefix="serverless-fastapi-mlops-club",
