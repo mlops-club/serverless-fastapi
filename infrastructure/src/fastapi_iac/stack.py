@@ -5,17 +5,14 @@ from pathlib import Path
 from typing import List
 
 import aws_cdk as cdk
-
 # coginto imports, user pool and client
 # coginto imports, user pool and client
 # imports for lambda functions and API Gateway
 from aws_cdk import CfnOutput, Duration, Stack
 from aws_cdk import aws_apigateway as apigw
 from aws_cdk import aws_cognito as cognito
-from aws_cdk import aws_iam as iam
 from aws_cdk import aws_s3 as s3
 from constructs import Construct
-
 from fastapi_iac.rest_api import LambdaFastAPI
 
 

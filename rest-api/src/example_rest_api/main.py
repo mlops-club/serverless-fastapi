@@ -11,16 +11,15 @@ The Step Function will then be responsible for starting and stopping the server.
 """
 
 
-from dataclasses import dataclass
 from textwrap import dedent
-from typing import List, Literal, Optional, TypedDict
+from typing import List, Optional
 
-from fastapi import APIRouter, FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from example_rest_api.services import FileManagerService
-from example_rest_api.schemas import APIServices
-from example_rest_api.settings import Settings
 from example_rest_api.routes import FILES_ROUTER
+from example_rest_api.schemas import APIServices
+from example_rest_api.services import FileManagerService
+from example_rest_api.settings import Settings
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 
 def create_app(
@@ -36,7 +35,7 @@ def create_app(
         description=dedent(
             """\
             Production-ready example of best practices for hosting a FastAPI based serverless REST API in AWS.
-            
+
             This sample API exposes an interface for managing files and their contents.
 
             [![Example badge](https://img.shields.io/badge/Example-Badge%20Link-blue.svg)](https://ericriddoch.info)

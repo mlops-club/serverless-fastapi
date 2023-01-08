@@ -1,18 +1,14 @@
 """Module defines endpoints for server information & acitons."""
 
-from typing import List, Optional, Union
-from fastapi import APIRouter, HTTPException, Query, Request
-from example_rest_api.schemas.files import PostFileResponse
-from example_rest_api.schemas.files import ListFilesResponse
-from example_rest_api.routes.docs import ExampleResponse
-from example_rest_api.routes.docs import make_apidocs_responses_obj_for_content_type
+from typing import List, Union
 
-from example_rest_api.settings import Settings
-from starlette.status import HTTP_404_NOT_FOUND, HTTP_200_OK
-from fastapi.responses import PlainTextResponse
 from example_rest_api import schemas
 from example_rest_api.errors import FileNotFoundError
-
+from example_rest_api.routes.docs import ExampleResponse, make_apidocs_responses_obj_for_content_type
+from example_rest_api.schemas.files import ListFilesResponse, PostFileResponse
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import PlainTextResponse
+from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND
 
 ROUTER = APIRouter()
 

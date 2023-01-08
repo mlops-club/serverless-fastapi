@@ -1,17 +1,17 @@
 from __future__ import annotations
+
 from typing import Optional
 
-from example_rest_api.errors import FileNotFoundError
-
 import boto3
+from example_rest_api.errors import FileNotFoundError
 
 try:
     from mypy_boto3_s3.client import S3Client
     from mypy_boto3_s3.type_defs import (
         DeleteObjectOutputTypeDef,
+        GetObjectOutputTypeDef,
         ListObjectsV2OutputTypeDef,
         PutObjectOutputTypeDef,
-        GetObjectOutputTypeDef,
     )
 except ImportError:
     print("Warning: boto3-stubs[s3] not installed")

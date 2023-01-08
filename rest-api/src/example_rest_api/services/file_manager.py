@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-import boto3
-
 from pathlib import Path
+from typing import List, Optional
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-
-from example_rest_api.services.service import IService
-from example_rest_api.settings import Settings
-
+import boto3
 from example_rest_api.aws.s3 import (
-    upload_file_to_bucket,
+    delete_object_from_s3_bucket,
     get_s3_object_contents,
     list_object_paths_in_s3_bucket,
-    delete_object_from_s3_bucket,
+    upload_file_to_bucket,
 )
+from example_rest_api.services.service import IService
+from example_rest_api.settings import Settings
 
 try:
     from mypy_boto3_s3 import S3Client
