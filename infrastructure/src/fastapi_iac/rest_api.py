@@ -35,7 +35,7 @@ class LambdaFastAPI(Construct):
         cdk.Stack.of(self)
 
         #: lambda function containing the minecraft FastAPI application code
-        fast_api_function: lambda_.Function = make_fast_api_function(
+        self._fast_api_function: lambda_.Function = make_fast_api_function(
             scope=self,
             construct_id=f"{construct_id}Lambda",
             frontend_cors_url=frontend_cors_url,
@@ -43,13 +43,13 @@ class LambdaFastAPI(Construct):
             env_vars=lambda_env_var_overrides,
         )
 
-        api = apigw.RestApi(self, f"{construct_id}RestApi")
-        proxy: apigw.Resource = api.root.add_resource(path_part="{proxy+}")
+        self._api = apigw.RestApi(self, f"{construct_id}RestApi")
+        proxy: apigw.Resource = self._api.root.add_resource(path_part="{proxy+}")
 
         proxy.add_method(
             http_method="ANY",
             integration=apigw.LambdaIntegration(
-                handler=fast_api_function,
+                handler=self._fast_api_function,
                 proxy=True,
             ),
             authorizer=authorizer,
@@ -57,17 +57,17 @@ class LambdaFastAPI(Construct):
 
         add_cors_options_method(resource=proxy, frontend_cors_url=frontend_cors_url)
 
-        CfnOutput(self, "EndpointURL", value=api.url)
+        CfnOutput(self, "EndpointURL", value=self._api.url)
 
     @property
     def role(self) -> iam.Role:
         """The IAM role of the lambda function."""
-        return self.role
+        return self._fast_api_function.role
 
     @property
     def url(self) -> str:
         """The URL of the API Gateway."""
-        return self.url
+        return self._api.url
 
 
 def make_fast_api_function(
@@ -79,7 +79,7 @@ def make_fast_api_function(
     timeout_seconds: int = 30,
     env_vars: Optional[Dict[str, str]] = None,
 ) -> lambda_.Function:
-    """
+    r"""
     Create a lambda function with the FastAPI app.
 
     To prepare the python depencies for the lambda function, this stack

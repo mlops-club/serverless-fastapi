@@ -6,10 +6,6 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseSettings, validator
 
-DEFAULT__DESTROY_SERVER_STATE_MACHINE_EXECUTION_ARN__PARAMETER_NAME = (
-    "/minecraft-platform/destroy-server-sfn-execution-arn"
-)
-
 
 class Settings(BaseSettings):
     """
@@ -27,18 +23,24 @@ class Settings(BaseSettings):
 
         Read about the various options settable in this Config class here:
         https://docs.pydantic.dev/usage/settings/
+
+        Also here:
+        https://docs.pydantic.dev/usage/model_config/
         """
 
         # causes attributes of Settings to be read from environment variables; ignoring case
         case_sensitive = False
 
+        # make all attributes of Settings immutable
+        frozen = True
+
+    s3_bucket_name: str
+    """Name of the S3 bucket where files are stored."""
+
+    s3_object_prefix: str = ""
+    """Prefix for all S3 objects."""
+
     environment: Literal["development", "production"] = "development"
-
-    deploy_server_state_machine_arn: str
-    """ARN of the state machine used to deploy a minecraft server."""
-
-    destroy_server_state_machine_arn: str
-    """ARN of the state machine used to destroy a minecraft server."""
 
     frontend_cors_url: Optional[str] = None
     """
@@ -47,18 +49,11 @@ class Settings(BaseSettings):
     or else browsers will block the frontend from recieving API responses.
     """
 
-    cloud_formation_server_ip_output_key_name: str = "MinecraftServerIp"
-    """The name of the output key name that that can be used to
-    fetch the ip address of the server from the cloud formation outputs."""
-
     dev_port: int = 8000
     """Port on which the FastAPI server will run in development mode on a developer's machine."""
 
     frontend_dev_port: int = 3000
     """Port used for the frontend development server."""
-
-    cloud_formation_stack_name: str
-    """Stack name for the server cloudforamtion stack."""
 
     # pylint: disable=no-self-argument
     @validator("frontend_cors_url", pre=True)  # noqa: R0201

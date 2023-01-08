@@ -4,7 +4,7 @@ services:
     build: .
     ports:
       - 8000:8000
-    image: rest-api
+    image: mlops-club/serverless-fastapi
     volumes:
       - ~/.aws:/root/.aws
       - .:/app
@@ -12,5 +12,4 @@ services:
       AWS_PROFILE: mlops-club
       DEV_PORT: 8000
       ENVIRONMENT: development
-
-# Get a valid requet to got from our frontend to back end
+      S3_BUCKET_NAME: awscdk-minecraft-bucket43879c71-5acoum234t7e

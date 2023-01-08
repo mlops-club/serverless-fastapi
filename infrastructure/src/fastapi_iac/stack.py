@@ -11,7 +11,6 @@ import aws_cdk as cdk
 # imports for lambda functions and API Gateway
 from aws_cdk import CfnOutput, Duration, Stack
 from aws_cdk import aws_apigateway as apigw
-from aws_cdk import aws_batch_alpha as batch_alpha
 from aws_cdk import aws_cognito as cognito
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_s3 as s3
@@ -48,7 +47,6 @@ class ServerlessFastAPIStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        """Sample S3 Bucket"""
         example_bucket = s3.Bucket(
             scope=self,
             id="ExampleBucket",
@@ -56,8 +54,6 @@ class ServerlessFastAPIStack(Stack):
             removal_policy=cdk.RemovalPolicy.DESTROY,
         )
 
-        """OAuth2 identity provider"""
-        # add an API Gateway endpoint to interact with the lambda function
         cognito_service = CognitoLoginPage(
             scope=self,
             construct_id="CognitoService",
@@ -65,8 +61,6 @@ class ServerlessFastAPIStack(Stack):
             login_page_domain_prefix=login_page_domain_prefix,
         )
 
-        """Backend REST API"""
-        # create lambda for the rest API and attach authorizer to API Gateway
         api = LambdaFastAPI(
             scope=self,
             construct_id="PaaSRestAPI",

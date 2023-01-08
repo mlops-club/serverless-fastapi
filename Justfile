@@ -27,7 +27,7 @@ install: require-venv
         flake8 \
         mypy
     # install the minecraft-deployment package as an "editable" package
-    python -m pip install -e {{AWS_CDK_DIR}}[all] {{FAST_API_DIR}}[all]
+    python -m pip install -e {{AWS_CDK_DIR}}[all] -e {{FAST_API_DIR}}[all]
     # install pre-commit hooks to protect the quality of code committed by contributors
     pre-commit install
     # # install git lfs for downloading rootski CSVs and other large files in the repo

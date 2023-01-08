@@ -1,9 +1,10 @@
 """This is a docstring."""
+
 from __future__ import annotations
 
 from typing import Protocol
 
-from minecraft_paas_api.settings import Settings
+from example_rest_api.settings import Settings
 
 
 class IService(Protocol):

@@ -12,83 +12,80 @@ The Step Function will then be responsible for starting and stopping the server.
 
 
 from dataclasses import dataclass
-from typing import Literal, Optional, TypedDict
+from textwrap import dedent
+from typing import List, Literal, Optional, TypedDict
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from minecraft_paas_api.routes import SERVER_ROUTER
-from minecraft_paas_api.settings import Settings
-
-ROUTER = APIRouter()
-
-
-class ProvisionMinecraftServerPayload(TypedDict):
-    """Input format supported by the state machine that provisions/destroys the Minecraft server."""
-
-    command: Literal["create", "destroy"]
-
-
-@ROUTER.get("/healthcheck")
-async def ping_this_api(request: Request):
-    """Return 200 to demonstrate that this REST API is reachable and can execute."""
-    # return all of request scope as a dictionary
-    return str(request.scope)
-
-
-@dataclass
-class Services:
-    """
-    Container for all ``Service``s used by the running application.
-
-    The ``Service`` abstraction should be used for any code that
-    makes calls over the network to services external to this API.
-    """
-
-    ...
+from example_rest_api.services import FileManagerService
+from example_rest_api.schemas import APIServices
+from example_rest_api.settings import Settings
+from example_rest_api.routes import FILES_ROUTER
 
 
 def create_app(
     settings: Optional[Settings] = None,
 ) -> FastAPI:
+    """Return a FastAPI instance, configured to handle requests."""
 
     if not settings:
         settings = Settings()
 
     app = FastAPI(
-        title="🎁 Minecraft Platform-as-a-Service API 🎄",
-        description="A FastAPI app for the Minecraft API.",
-        version="0.0.1",
+        title="Serverless FastAPI",
+        description=dedent(
+            """\
+            Production-ready example of best practices for hosting a FastAPI based serverless REST API in AWS.
+            
+            This sample API exposes an interface for managing files and their contents.
+
+            [![Example badge](https://img.shields.io/badge/Example-Badge%20Link-blue.svg)](https://ericriddoch.info)
+            """
+        ),
+        version="1.0.0",
         docs_url="/",
         redoc_url=None,
     )
 
     # we can put arbitrary attributes onto app.state and access them from the routes
     app.state.settings = settings
-    app.state.services = Services()
+    app.state.services = APIServices(file_manager=FileManagerService.from_settings(settings))
 
     # configure startup behavior: initialize services on startup
     @app.on_event("startup")
     async def on_startup():
         """Initialize each service."""
-        # calls to services init methods should be made here
-        print(settings.json())
+        app_services: APIServices = app.state.services
+        app_services.file_manager.init()
 
     # add routes
-    app.include_router(ROUTER, tags=["Admin"])
-    app.include_router(SERVER_ROUTER, tags=["Minecraft Server"])
-    # app.include_router(AWS_DESCRIPTOR_ROUTER, tags=["AWS"])
+    app.include_router(FILES_ROUTER, tags=["Files"])
+    app.get("/healthcheck", tags=["Admin"])(ping_this_api)
 
-    # add authorized CORS origins (add these origins to response headers to
-    # enable frontends at these origins to receive requests from this API)
+    configure_cors(allowed_origins=settings.allowed_cors_origins, app=app)
+
+    return app
+
+
+async def ping_this_api():
+    """Return 200 to demonstrate that this REST API is reachable and can execute."""
+    return "200 OK"
+
+
+def configure_cors(allowed_origins: List[str], app: FastAPI):
+    """
+    Configure CORS responses as a FastAPI middleware.
+
+    Add authorized CORS origins (add these origins to response headers to
+    enable frontends at these origins to receive requests from this API).
+    """
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_cors_origins,
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    return app
 
 
 def create_default_app() -> FastAPI:
