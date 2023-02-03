@@ -10,7 +10,20 @@ So Mangum is a FastAPI to Lambda converter.
 
 from fastapi import FastAPI
 from mangum import Mangum
-from minecraft_paas_api.main import create_default_app
+from example_rest_api.main import create_default_app
+
+try:
+    from aws_lambda_typing.events import APIGatewayProxyEventV1
+    from aws_lambda_typing.context import Context
+except ImportError:
+    ...
+
+
+print("Handler is initializing!!!")
 
 APP: FastAPI = create_default_app()
-handler = Mangum(APP)
+
+
+def handler(event: "APIGatewayProxyEventV1", context: "Context"):
+    mangum_app = Mangum(app=APP)
+    return mangum_app(event, context)

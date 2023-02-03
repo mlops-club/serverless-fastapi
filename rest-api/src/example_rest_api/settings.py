@@ -34,6 +34,9 @@ class Settings(BaseSettings):
         # make all attributes of Settings immutable
         frozen = True
 
+    root_path: Optional[str] = None
+    """Prefix for all API routes. May be necessary when running behind a reverse proxy."""
+
     s3_bucket_name: str
     """Name of the S3 bucket where files are stored."""
 

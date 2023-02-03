@@ -21,11 +21,19 @@ from example_rest_api.settings import Settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
+LOGGER.error("Initializing FastAPI app...")
+
 
 def create_app(
     settings: Optional[Settings] = None,
 ) -> FastAPI:
     """Return a FastAPI instance, configured to handle requests."""
+
+    LOGGER.error("Initializing FastAPI app...")
 
     if not settings:
         settings = Settings()
@@ -43,7 +51,8 @@ def create_app(
         ),
         version="1.0.0",
         docs_url="/",
-        redoc_url=None,
+        redoc_url="/redoc",
+        root_path=settings.root_path,
     )
 
     # we can put arbitrary attributes onto app.state and access them from the routes
