@@ -8,13 +8,13 @@ by lambda into a form that is usable by FastAPI.
 So Mangum is a FastAPI to Lambda converter.
 """
 
+from example_rest_api.main import create_default_app
 from fastapi import FastAPI
 from mangum import Mangum
-from example_rest_api.main import create_default_app
 
 try:
-    from aws_lambda_typing.events import APIGatewayProxyEventV1
     from aws_lambda_typing.context import Context
+    from aws_lambda_typing.events import APIGatewayProxyEventV1
 except ImportError:
     ...
 

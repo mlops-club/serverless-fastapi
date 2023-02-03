@@ -11,6 +11,7 @@ The Step Function will then be responsible for starting and stopping the server.
 """
 
 
+import logging
 from textwrap import dedent
 from typing import List, Optional
 
@@ -20,8 +21,6 @@ from example_rest_api.services import FileManagerService
 from example_rest_api.settings import Settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-import logging
 
 LOGGER = logging.getLogger(__name__)
 

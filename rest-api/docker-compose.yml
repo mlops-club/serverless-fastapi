@@ -1,6 +1,6 @@
 services:
 
-  api:
+  fastapi:
     build: .
     ports:
       - 8000:8000
@@ -13,3 +13,21 @@ services:
       DEV_PORT: 8000
       ENVIRONMENT: development
       S3_BUCKET_NAME: awscdk-minecraft-bucket43879c71-5acoum234t7e
+
+  ###############################
+  # --- Local Observability --- #
+  ###############################
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.21
+    ports:
+      - 16686:16686
+      - 14268:14268
+      - 6831:6831/udp
+      - 6832:6832/udp
+      - 5778:5778
+      - 5775:5775/udp
+      - 9411:9411
+
+# install docker "loki" plugin
+# docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
