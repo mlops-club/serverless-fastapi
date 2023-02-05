@@ -40,6 +40,7 @@ class ServerlessFastAPIStack(Stack):
         frontend_cors_url: str,
         login_page_domain_prefix: str,
         fastapi_code_dir: Path,
+        enable_auth: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -60,8 +61,8 @@ class ServerlessFastAPIStack(Stack):
 
         api = LambdaFastAPI(
             scope=self,
-            construct_id="PaaSRestAPI",
-            authorizer=cognito_service.authorizer,
+            construct_id="ServerlessFastAPI",
+            authorizer=cognito_service.make_apigw_authorizer() if enable_auth else None,
             frontend_cors_url=frontend_cors_url,
             fast_api_code_dir=fastapi_code_dir,
             lambda_env_var_overrides={
@@ -169,15 +170,16 @@ class CognitoLoginPage(Construct):
 
         self.fully_qualified_domain_name = f"{self.domain.domain_name}.auth.{scope.region}.amazoncognito.com"
 
-        self.authorizer = apigw.CognitoUserPoolsAuthorizer(
-            scope=self,
-            id="CognitoAuthorizer",
-            cognito_user_pools=[self.user_pool],
-        )
-
         # add a CfnOutput to get the user pool domain
         CfnOutput(
             scope=scope,
             id="UserPoolDomain",
             value=self.domain.domain_name,
+        )
+
+    def make_apigw_authorizer(self) -> apigw.CognitoUserPoolsAuthorizer:
+        apigw.CognitoUserPoolsAuthorizer(
+            scope=self,
+            id="CognitoAuthorizer",
+            cognito_user_pools=[self.user_pool],
         )

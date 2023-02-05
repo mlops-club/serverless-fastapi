@@ -3,7 +3,7 @@
 
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import aws_cdk as cdk
 from aws_cdk import CfnOutput
@@ -13,6 +13,9 @@ from aws_cdk import aws_lambda as lambda_
 from constructs import Construct
 
 REACT_LOCALHOST = "http://localhost:3000"
+
+ADOT_PYTHON_LAYER_VERSION = "arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-python-amd64-ver-1-15-0:2"
+DEFAULT_STAGE_NAME = "prod"
 
 
 class LambdaFastAPI(Construct):
@@ -37,26 +40,58 @@ class LambdaFastAPI(Construct):
         #: lambda function containing the minecraft FastAPI application code
         self._fast_api_function: lambda_.Function = make_fast_api_function(
             scope=self,
-            construct_id=f"{construct_id}Lambda",
+            construct_id=f"Lambda",
             frontend_cors_url=frontend_cors_url,
             fast_api_src_code_dir=fast_api_code_dir,
             env_vars=lambda_env_var_overrides,
+            stage_name=DEFAULT_STAGE_NAME,
         )
+        instrument_python_lambda_with_opentelemetry(scope=self, lambda_function=self._fast_api_function)
 
-        self._api = apigw.RestApi(self, f"{construct_id}RestApi")
+        # add logging instrumentation
+        self._fast_api_function.add_layers(
+            make_fastapi_dependencies_layer(
+                scope=self,
+                construct_id="fastapi-app-dependencies",
+                fast_api_src_code_dir=fast_api_code_dir,
+                otel_instrumentation_packages=[
+                    "logging",
+                    "fastapi",
+                ],
+            )
+        )
+        self._fast_api_function.add_environment("OTEL_SERVICE_NAME", "serverless-fastapi")
+        self._fast_api_function.add_environment("OTEL_PYTHON_LOG_CORRELATION", "true")
+        self._fast_api_function.add_environment("OTEL_PYTHON_LOG_LEVEL", "info")
+        self._fast_api_function.add_environment("OTEL_PROPAGATORS", "xray")
+        self._fast_api_function.add_environment("OTEL_PYTHON_ID_GENERATOR", "xray")
+
+        self._api = apigw.RestApi(
+            self,
+            f"-RestApi",
+            deploy_options=apigw.StageOptions(
+                stage_name=DEFAULT_STAGE_NAME,
+            ),
+        )
         proxy: apigw.Resource = self._api.root.add_resource(path_part="{proxy+}")
 
-        proxy.add_method(
-            http_method="ANY",
-            integration=apigw.LambdaIntegration(
-                handler=self._fast_api_function,
-                proxy=True,
-            ),
+        # configure the /{proxy+} resource to proxy to the lambda function and handle CORS
+        configure_lambda_proxy_and_cors(
             authorizer=authorizer,
+            frontend_cors_url=frontend_cors_url,
+            fastapi_function=self._fast_api_function,
+            resource=proxy,
         )
 
-        add_cors_options_method(resource=proxy, frontend_cors_url=frontend_cors_url)
+        # we must configure / to in the same way because / is a different resource than /{proxy+}
+        configure_lambda_proxy_and_cors(
+            authorizer=authorizer,
+            frontend_cors_url=frontend_cors_url,
+            fastapi_function=self._fast_api_function,
+            resource=self._api.root,
+        )
 
+        cdk.Tags.of(self).add("construct", "lambda-fast-api")
         CfnOutput(self, "EndpointURL", value=self._api.url)
 
     @property
@@ -70,11 +105,31 @@ class LambdaFastAPI(Construct):
         return self._api.url
 
 
+def configure_lambda_proxy_and_cors(
+    resource: apigw.Resource,
+    frontend_cors_url: str,
+    authorizer: Optional[apigw.Authorizer],
+    fastapi_function: lambda_.Function,
+):
+    """Configure the API Gateway resource to proxy requests to the lambda function."""
+    resource.add_method(
+        http_method="ANY",
+        integration=apigw.LambdaIntegration(
+            handler=fastapi_function,
+            proxy=True,
+        ),
+        authorizer=authorizer,
+    )
+
+    add_cors_options_method(resource=resource, frontend_cors_url=frontend_cors_url)
+
+
 def make_fast_api_function(
     scope: Construct,
     construct_id: str,
     frontend_cors_url: str,
     fast_api_src_code_dir: Path,
+    stage_name: str,
     memory_size_mb: int = 512,
     timeout_seconds: int = 30,
     env_vars: Optional[Dict[str, str]] = None,
@@ -106,6 +161,11 @@ def make_fast_api_function(
     sort of ``docker login`` command before executing this script. The AWS CDK images are stored in public.ecr.aws
     which requires a ``docker login`` command to be run first.
 
+    Logging and Tracing with OpenTelemetry:
+
+    This function sets up AWS XRay monitoring and correlated logs based on the following docs:
+    https://aws-otel.github.io/docs/getting-started/lambda/lambda-python
+
     :param scope: The CDK scope to attach this lambda function to.
     :param construct_id: The id of this lambda function.
     :param frontend_cors_url: The URL of the frontend that will be making requests to this lambda function.
@@ -116,9 +176,19 @@ def make_fast_api_function(
     """
     env_vars = env_vars or {}
 
-    fast_api_function = lambda_.Function(
+    # stack = cdk.Stack.of(scope)
+
+    fastapi_function = lambda_.Function(
         scope,
-        id=construct_id,
+        id="FastAPIFunction",
+        # # layer with
+        # #   (a) AWS Distro of OpenTelemetry in Python--a python library
+        # #   (b) reduced version of the ADOT Collector Lambda plugin
+        # adot_instrumentation=lambda_.AdotInstrumentationConfig(
+        #     exec_wrapper=lambda_.AdotLambdaExecWrapper.PROXY_HANDLER,
+        #     layer_version=lambda_.AdotLayerVersion.lambda_.AdotLambdaLayerPythonSdkVersion.LATEST,
+        # ),
+        tracing=lambda_.Tracing.ACTIVE,
         timeout=cdk.Duration.seconds(timeout_seconds),
         memory_size=memory_size_mb,
         runtime=lambda_.Runtime.PYTHON_3_8,
@@ -136,19 +206,144 @@ def make_fast_api_function(
                     "-c",
                     "mkdir -p /asset-output"
                     # + "&& pip install -r ./aws-lambda/requirements.txt -t /asset-output"
-                    + "&& pip install .[lambda] --target /asset-output"
-                    + "&& cp ./aws-lambda/index.py /asset-output"
+                    + "&& pip install . --target /asset-output " + "&& cp ./aws-lambda/index.py /asset-output"
                     # + "&& rm -rf /asset-output/boto3 /asset-output/botocore",
                 ],
             ),
         ),
         environment={
             "FRONTEND_CORS_URL": frontend_cors_url,
+            "ROOT_PATH": f"/{stage_name}",
             **env_vars,
         },
     )
 
-    return fast_api_function
+    return fastapi_function
+
+
+def make_fastapi_dependencies_layer(
+    scope: Construct,
+    construct_id: str,
+    fast_api_src_code_dir: Path,
+    otel_instrumentation_packages: List[str],
+) -> lambda_.LayerVersion:
+    """
+    Install all of the FastAPI dependencies into a zip file which will be published to S3.
+
+    According to the lambda layer docs, the zip file containing the layer contents needs to have
+    all of the libraries inside of a /python/ folder. In the lambda runtime, these files will
+    end up being located at /opt/python/<libraries>.
+    https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html#configuration-layers-path
+    """
+    pip_install_otel_instrumentation_packages_cmd = "pip install "
+    pip_install_otel_instrumentation_packages_cmd += " ".join(
+        [
+            f"--upgrade opentelemetry-instrumentation-{pkg} --target /asset-output/python"
+            for pkg in otel_instrumentation_packages
+        ]
+    )
+
+    return lambda_.LayerVersion(
+        scope,
+        id=construct_id,
+        compatible_runtimes=[lambda_.Runtime.PYTHON_3_8],
+        code=lambda_.Code.from_asset(
+            path=str(fast_api_src_code_dir / "aws-lambda"),
+            bundling=cdk.BundlingOptions(
+                # learn about this here:
+                # https://docs.aws.amazon.com/cdk/api/v1/python/aws_cdk.aws_lambda/README.html#bundling-asset-code
+                # Using this lambci image makes it so that dependencies with C-binaries compile correctly for the lambda runtime.
+                # The AWS CDK python images were not doing this. Relevant dependencies are: pandas, asyncpg, and psycogp2-binary.
+                image=cdk.DockerImage.from_registry(image="lambci/lambda:build-python3.8"),
+                command=[
+                    "bash",
+                    "-c",
+                    "mkdir -p /asset-output/python/"
+                    # install dependencies into the /asset-output/python/ folder
+                    + " && pip install -r ./requirements.txt --target /asset-output/python/"
+                    + " && "
+                    + pip_install_otel_instrumentation_packages_cmd
+                    + " && rm -rf /asset-output/python/boto3 /asset-output/python/botocore",
+                ],
+            ),
+            exclude=["index.py"],
+        ),
+    )
+
+
+def instrument_python_lambda_with_opentelemetry(scope: Construct, lambda_function: lambda_.Function) -> None:
+    """
+    Instrument a Python function following the official docs.
+
+    Docs here: https://aws-otel.github.io/docs/getting-started/lambda/lambda-python
+
+    In theory, the following code option in the aws Lambda (and Lambda Python Alpha) construct
+    should do exactly what this function does. After trying it out in January 2023, I found
+    that it uses OTel version 0-13 which was not the latest. In addition, it does not
+    set a required environment variable that must be set for the most recent version to work.
+
+    ```python
+    lambda_.Function(
+        ...
+        # layer with
+        #   (a) AWS Distro of OpenTelemetry in Python--a python library
+        #   (b) reduced version of the ADOT Collector Lambda plugin
+        adot_instrumentation=lambda_.AdotInstrumentationConfig(
+            exec_wrapper=lambda_.AdotLambdaExecWrapper.PROXY_HANDLER,
+            layer_version=lambda_.AdotLayerVersion.lambda_.AdotLambdaLayerPythonSdkVersion.LATEST,
+        ),
+        ...
+    )
+    ```
+
+    The internals of the layer can be found on GitHub here:
+    https://github.com/aws-observability/aws-otel-lambda/blob/main/python/scripts/otel-instrument
+
+    NOTE: This function should not be necessary. It is meant to be built into the
+    official L2 Lambda construct
+    """
+    otel_layer: lambda_.LayerVersion = lookup_aws_distro_of_open_telemetry_python_lambda_layer(scope=scope)
+    lambda_function.add_layers(otel_layer)
+    lambda_function.add_environment("AWS_LAMBDA_EXEC_WRAPPER", "/opt/otel-instrument")
+
+
+def build_python_lambda_layer(scope: Construct, requirements: List[str]) -> lambda_.LayerVersion:
+    """
+    Build a lambda layer from a list of requirements.
+
+    The layer will be built using the lambci/lambda:build-python3.8 image.
+    This image is used to build lambda layers for the python 3.8 runtime.
+    """
+    # prepare to use a placeholder directory that we won't actually use to install the requirements
+    tmp_dir = Path("/tmp")
+    tmp_dir.mkdir(exist_ok=True)
+
+    pip_install_reqs_cmd = "pip install "
+    pip_install_reqs_cmd += " ".join([f"{req} --target /asset-output" for req in requirements])
+    print(pip_install_reqs_cmd)
+
+    return lambda_.LayerVersion(
+        scope=scope,
+        id="otel-python38",
+        code=lambda_.Code.from_asset(
+            path=str(tmp_dir),
+            bundling=cdk.BundlingOptions(
+                image=cdk.DockerImage.from_registry(image="lambci/lambda:build-python3.8"),
+                command=[
+                    "bash",
+                    "-c",
+                    "mkdir -p /asset-output && " + pip_install_reqs_cmd,
+                ],
+            ),
+        ),
+    )
+
+
+def write_python_requirements_file(requirements: List[str], requirements_file_dir: Path) -> Path:
+    requirements_txt_contents: str = "\n".join(requirements)
+    requirements_file = requirements_file_dir / "requirements.txt"
+    requirements_file.write_text(requirements_txt_contents)
+    return requirements_file
 
 
 def make_cors_preflight_mock_integration(frontend_cors_url: str) -> apigw.MockIntegration:
@@ -233,4 +428,18 @@ def add_cors_options_method(
                 },
             )
         ],
+    )
+
+
+def lookup_aws_distro_of_open_telemetry_python_lambda_layer(scope: Construct) -> lambda_.LayerVersion:
+    """
+    Look up the ARN of the AWS Distro of OpenTelemetry Python Lambda layer.
+
+    Official docs for this layer and the role it plays in the OpenTelemetry setup:
+    https://aws-otel.github.io/docs/getting-started/lambda/lambda-python
+
+    Formula: `arn:aws:lambda:<region>:901920570463:layer:aws-otel-python-<architecture>-ver-1-15-0:2`
+    """
+    return lambda_.LayerVersion.from_layer_version_arn(
+        scope=scope, id="aws-otel-python", layer_version_arn=ADOT_PYTHON_LAYER_VERSION
     )

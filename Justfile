@@ -47,7 +47,7 @@ cdk-deploy: #require-venv
             --require-approval never \
             --profile {{AWS_PROFILE}} \
             --region {{AWS_REGION}} \
-            --app "python app.py" # --hotswap
+            --app "python app.py" --hotswap
 
     # --require-approval any-change
 

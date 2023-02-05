@@ -15,6 +15,7 @@ import logging
 from textwrap import dedent
 from typing import List, Optional
 
+from example_rest_api.middlewares import add_response_time_header, log_request
 from example_rest_api.routes import FILES_ROUTER
 from example_rest_api.schemas import APIServices
 from example_rest_api.services import FileManagerService
@@ -46,6 +47,10 @@ def create_app(
             This sample API exposes an interface for managing files and their contents.
 
             [![Example badge](https://img.shields.io/badge/Example-Badge%20Link-blue.svg)](https://ericriddoch.info)
+
+            Same badge with square theme
+
+            [![Example badge](https://img.shields.io/badge/Example-Badge%20Link-blue.svg?style=flat-square)](https://ericriddoch.info)
             """
         ),
         version="1.0.0",
@@ -68,6 +73,9 @@ def create_app(
     # add routes
     app.include_router(FILES_ROUTER, tags=["Files"])
     app.get("/healthcheck", tags=["Admin"])(ping_this_api)
+
+    app.middleware("http")(add_response_time_header)
+    app.middleware("http")(log_request)
 
     configure_cors(allowed_origins=settings.allowed_cors_origins, app=app)
 

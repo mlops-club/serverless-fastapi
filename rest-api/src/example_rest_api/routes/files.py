@@ -1,5 +1,6 @@
 """Module defines endpoints for server information & acitons."""
 
+from logging import getLogger
 from typing import List, Union
 
 from example_rest_api import schemas
@@ -9,6 +10,8 @@ from example_rest_api.schemas.files import ListFilesResponse, PostFileResponse
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import PlainTextResponse
 from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND
+
+LOGGER = getLogger(__name__)
 
 ROUTER = APIRouter()
 
@@ -32,9 +35,11 @@ def get_file(path: str, request: Request):
     """Try to return the contents of a file."""
     services = schemas.APIServices.from_request(request)
     try:
+        LOGGER.info('Attempting to retrieve contents of file at path: "%s"', path)
         contents: str = services.file_manager.read_file(path)
         return PlainTextResponse(content=contents, status_code=HTTP_200_OK)
     except FileNotFoundError as err:
+        LOGGER.exception("File not found: %s", path)
         raise FileNotFoundError.make_http_exception(path) from err
 
 
@@ -55,6 +60,7 @@ def get_file(path: str, request: Request):
 )
 def create_file(path: str, content: str, request: Request):
     """Create or overwrite a new file."""
+    LOGGER.info('Attempting to write %s bytes to file at path: "%s"', len(content), path)
     services = schemas.APIServices.from_request(request)
     services.file_manager.write_file(path, content)
     return PostFileResponse(path=path)
@@ -78,6 +84,7 @@ def create_file(path: str, content: str, request: Request):
 def delete_file(path: str, request: Request):
     """Delete a file."""
     services = schemas.APIServices.from_request(request)
+    LOGGER.info('Attempting to delete file at path: "%s"', path)
     services.file_manager.delete_file(path)
     return PostFileResponse(path=path)
 

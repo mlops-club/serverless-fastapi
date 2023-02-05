@@ -1,6 +1,9 @@
 install:
 	pip install -e .[all]
 
+run-docker:
+	docker-compose up
+
 run:
 	provision_minecraft_server__state_machine__arn=abc \
 	uvicorn "example_rest_api.main:create_default_app" --reload --factory --workers 1 --host 0.0.0.0 --port 8000

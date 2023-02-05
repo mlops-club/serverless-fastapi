@@ -9,14 +9,22 @@ services:
       - ~/.aws:/root/.aws
       - .:/app
     environment:
-      AWS_PROFILE: mlops-club
+      # AWS_PROFILE: mlops-club
       DEV_PORT: 8000
       ENVIRONMENT: development
-      S3_BUCKET_NAME: awscdk-minecraft-bucket43879c71-5acoum234t7e
+      S3_BUCKET_NAME: serverless-fastapi-examplebucketdc717cf4-1b478jljaj606
+      OTEL_SERVICE_NAME: example-rest-api--local
+      # OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_PYTHON_LOG_CORRELATION: "true"
+      OTEL_PYTHON_LOG_LEVEL: info
+      OTEL_PYTHON_ID_GENERATOR: xray
+      OTEL_PROPAGATORS: xray
+      # OTEL_TRACES_EXPORTER: console,otlp
+      # OTEL_METRICS_EXPORTER: console
 
-  ###############################
-  # --- Local Observability --- #
-  ###############################
+      ###############################
+      # --- Local Observability --- #
+      ###############################
 
   jaeger:
     image: jaegertracing/all-in-one:1.21

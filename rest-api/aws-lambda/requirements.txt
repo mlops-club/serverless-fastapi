@@ -1,0 +1,18 @@
+boto3
+fastapi
+mangum
+
+opentelemetry-distro[otlp]
+opentelemetry-instrumentation-asgi
+
+# result of 'opentelemetry-bootstrap --action requirements' minus boto
+opentelemetry-instrumentation-aws-lambda
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-logging
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-urllib
+opentelemetry-instrumentation-urllib3
+opentelemetry-instrumentation-wsgi
+opentelemetry-propagator-aws-xray
+opentelemetry-sdk-extension-aws
+pydantic

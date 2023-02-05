@@ -1,0 +1,4 @@
+opentelemetry-distro
+opentelemetry-exporter-otlp
+
+opentelemetry-instrumentation-logging
