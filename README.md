@@ -6,6 +6,7 @@ References:
 
 1. AWS-themed GitHub Pages marketing page: https://aws-otel.github.io/
 2. AWS Lambda Python setup: https://aws-otel.github.io/docs/getting-started/lambda/lambda-python
+3. OpenTelemetry Python autoinstrumentation [PyPI page](https://pypi.org/project/opentelemetry-instrumentation/)
 
 Example `event` passed from the API Gateway to the lambda:
 
@@ -108,6 +109,37 @@ Example `event` passed from the API Gateway to the lambda:
 
 ## Notes
 
+### API Gateway
+
+I got these metrics when I set `metrics_enabled=True`.
+
+![](./docs/api-gateway-metrics.png)
+
+And this when I set `tracing_enabled=True`. Before setting this to `True`, we saw the same visualization, but
+the API Gateway component was missing.
+
+![](./docs/api-gateway-trace.png)
+
+```python
+self._api = apigw.RestApi(
+    self,
+    f"-RestApi",
+    deploy_options=apigw.StageOptions(
+        stage_name=DEFAULT_STAGE_NAME,
+        metrics_enabled=True,
+        tracing_enabled=True,
+        description="Production stage",
+        throttling_burst_limit=10,
+        throttling_rate_limit=2,
+    ),
+    description="Serverless FastAPI",
+)
+```
+
+### Instrumentation
+
+Good resource:
+
 ### `uvicorn` problem
 
 `opentelemetry-instrument -- uvicorn ...` fails to autoinstrument our app.
@@ -140,3 +172,34 @@ The key-value pairs in the dict will become structured and searchable via CloudW
 The builtin AWS log fields are usually `@message` and the others you can see in this screenshot:
 
 ![xray](./docs/correlated-logs.png)
+
+### Custom choices
+
+Any custom choices you make for your app are BAD!
+
+- Logging format
+- Generating request ID, what to call that header
+
+You want as many apps in your group/company to use the same standards as possible.
+
+### Course presentation
+
+MLOps is a combination of Software Development, DevOps, ML Engineering, and Data Engineering.
+
+This course will give lots of good exposure to Software Development and DevOps, and attempt
+to include ML Engineering examples (like when you need to keep track of RAM, say ways
+a ML service could crash due to the problems typical services run into).
+
+Show a heirarchy of needs?
+
+- Code
+- Deployment
+- Training, re-training, and special deployment steps for MLOps (not covered here)
+- Monitoring afterward
+- ML-specific Monitoring (not covered here)
+
+Talk about logs, traces, metrics, dashboards, alerts.
+
+### Badges
+
+Could do a quick tangent on https://shields.io/ when we make the FastAPI docs description.

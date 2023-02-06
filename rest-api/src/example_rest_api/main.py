@@ -51,6 +51,7 @@ def create_app(
             Same badge with square theme
 
             [![Example badge](https://img.shields.io/badge/Example-Badge%20Link-blue.svg?style=flat-square)](https://ericriddoch.info)
+            [![Example badge](https://img.shields.io/badge/Example-Badge%20Link-blue.svg?style=for-the-badge)](https://ericriddoch.info)
             """
         ),
         version="1.0.0",

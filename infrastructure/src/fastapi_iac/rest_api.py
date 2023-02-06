@@ -71,8 +71,15 @@ class LambdaFastAPI(Construct):
             f"-RestApi",
             deploy_options=apigw.StageOptions(
                 stage_name=DEFAULT_STAGE_NAME,
+                metrics_enabled=True,
+                tracing_enabled=True,
+                description="Production stage",
+                throttling_burst_limit=10,
+                throttling_rate_limit=2,
             ),
+            description="Serverless FastAPI",
         )
+
         proxy: apigw.Resource = self._api.root.add_resource(path_part="{proxy+}")
 
         # configure the /{proxy+} resource to proxy to the lambda function and handle CORS
@@ -174,9 +181,7 @@ def make_fast_api_function(
     :param timeout_seconds: The amount of time to allow the lambda function to run before timing out.
     :param env_vars: A dictionary of environment variables to make available within the lambda function runtime.
     """
-    env_vars = env_vars or {}
-
-    # stack = cdk.Stack.of(scope)
+    env_vars: dict = env_vars or {}
 
     fastapi_function = lambda_.Function(
         scope,
