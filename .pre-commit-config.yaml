@@ -83,8 +83,8 @@ repos:
     - repo: https://github.com/humitos/mirrors-autoflake.git
       rev: v1.3
       hooks:
-          # remove ALL unused imports; to protect intentional unused imports, add "# noqa" to the end of a line
           - id: autoflake
+            language: system
             args:
                 [
                     --in-place,
@@ -92,6 +92,7 @@ repos:
                     --remove-unused-variable,
                     --ignore-init-module-imports,
                 ]
+            
 
     - repo: https://github.com/akaihola/darker
       rev: 1.4.1
