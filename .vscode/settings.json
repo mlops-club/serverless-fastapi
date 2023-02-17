@@ -1,0 +1,36 @@
+{
+    // isort: use the "isort" vs code extension, it will use the isort in the venv if available
+    "isort.args": [
+        "--settings-path=${workspaceFolder}/rest-api/pyproject.toml"
+    ],
+    "black-formatter.args": [
+        "--config=${workspaceFolder}/rest-api/pyproject.toml"
+    ],
+    "[python]": {
+        // "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        },
+        "editor.formatOnSave": true,
+    },
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintArgs": [
+        "--rcfile=${workspaceFolder}/rest-api/pyproject.toml",
+    ],
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        // "--line-length=112",
+        "--config=${workspaceFolder}/rest-api/pyproject.toml"
+    ],
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        // '--toml-config' argument comes from the 'pip install Flake8-pyproject' plugin
+        "--toml-config=${workspaceFolder}/rest-api/pyproject.toml",
+    ],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.indexing": true, // Found that somewhere on SO
+    "python.languageServer": "Pylance",
+    "python.analysis.completeFunctionParens": true,
+    "python.linting.mypyEnabled": true,
+    
+}

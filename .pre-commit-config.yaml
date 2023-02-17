@@ -92,7 +92,7 @@ repos:
                     --remove-unused-variable,
                     --ignore-init-module-imports,
                 ]
-            
+
 
     - repo: https://github.com/akaihola/darker
       rev: 1.4.1
