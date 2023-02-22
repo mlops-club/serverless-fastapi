@@ -11,11 +11,154 @@ References:
 
 ## Notes
 
+### License
+
+Talk about the common licenses.
+
+Risk: people could take your code without crediting you and profit from it. Or potentially claim that they authored it.
+
+Desire: You may want to allow certain types of access, maybe requesting attribution.
+
+When you are writing commercial software, licenses matter extra, you don't want to get your company in trouble for stealing code. Could talk about the controversy of GitHub Copilot.
+
+### CI and Code Review
+
+- Define Code Review, integration, continuous integration, Peer review, Pull reqeust
+  - Human attention is extremely valuable! Don't waste it on anything a machine can review for you. This point should be extra clear because by this time, we should have discussed how the PR process slows teams down in the first place, and pair programming is the ideal.
+
+- Maybe we should show the DevOps infinity visualization
+
+- It'd be great to cover different badges as we go:
+  - shields.io
+  - build passing / failing (GitHub actions), azure, circle, etc. have this too
+  - pre-commit has a service
+  - test coverage; coverage umbrella vendor. Talk about how GitHub apps vend: usually make it free to use and charge for commercial/private software
+
+- It could be good to talk about common "bots" like:
+  - dependabot
+  - all contributors
+
+- We should have a section on security scanning. Discuss the types of vulerabilities: supply chain, sshgit, exploits, etc. 
+  - Discuss how to pick dependencies: the snyk package index
+  - Some companies only allow you to use a pre-approved list of packages, or even pre-approved versions, which they may enforce by vending to an internal PyPI server
+  - Private PyPI server
+
+### Poetry
+
+Very complete [pyproject.toml](https://github.com/rstcheck/rstcheck/blob/main/pyproject.toml) file
+
+Also the `rich` 
+
+#### Python packaging history
+
+The history of Python packaging is long and complicated. And python to an early python three, the python standard library had a Library called distutils. The point of this library wants to provide a standard way of sharing python code. Python packages generally need a few things. They need a way to specify dependencies, they need a way to specify versions, and it's nice if they can specify metadata like who the author is and what get out the repository is associated with the cove base. The library also provided a way to include assets such as binaries, images, Jason files, etc.
+
+The problem with this details is that it was very hard to use. The distribution utilities library was part of the python standard library, but it was a pain to use. So the community responded with an abstraction over distribution utilities call to set up tools. Set up tools was never made part of the python standard library. However, set up tools was so easy to use became much more popular than a built in distribution utilities library. Python maintainer saw that set up tools provided a much better packaging experience for Python users than just details did. So, although set up tools was not part of the official python standard library, I Python maintainers declared that set up tools was the officially recommended way of packaging python code into a shareable form. Today, if you go to the official Python documentation,
+ you will find packaging instructions using set up tools to create packages from Python code.
+
+Despite set up tools being easier to use than distribution utilities, many still found it very difficult to use. Beginners and professionals alike found that difficult troubleshooting was almost always necessary whenever they were adding intermediate to advanced packaging features to the package. For example, the manner in which you add binaries to python package using set up tools is by writing a file calle manifest dot in. In addition to writing this file, you must also add some special configuration. This is an notoriously difficult process to get right. Mini project packaging templates are available online do you help beginners get set up tools working correctly. While these templates work, they are difficult to modify or fully understand, because of how complicated they are.
+
+Python maintainers acknowledge that set up tools was not satisfying the needs of certain python users. There was also a interesting problem faced by package authors that had to do with running isolated builds to separate package dependencies from build time dependencies. In response to both of these issues, the Python maintainers authored a PEP proposal from which a tool called build was created. Since set up tools was a third-party packaging tool, in theory nothing should stop other groups from creating other third-party packaging tools that did the same job. The PEP proposal for build defined a standard for building build back ends which could be used to build python distributions such as source distributions and wheels. Command line tool called build emerged from this. The build command line tool is capable of building any python package using a valid build back end. Some popular build Backends include poetry, Hatch, and flit. Of those three options, poetry is by far the most popular.
+
+`pipx` and `fastapi` use `hatch`. Never seen a project using `flit`.
+
+[PEP 621](https://peps.python.org/pep-0621/#example) defines a standard
+way of putting `setup.cfg` info directly into `pyproject.toml`. It doesn't look like
+`poetry` uses this format... does the `hatchling` engine? [Setuptools has adopted
+the format](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html), so we could use this at work.
+
+The Python Packaging Authority (PyPA) is a working group that maintains a core set of software projects used in Python packaging.
+The PyPA publishes the P[ython Packaging User Guide](https://packaging.python.org/en/latest/), which is the authoritative resource on how to package, publish, and install Python projects using current tools. 
+
+#### `.ini` and `.toml`
+
+`.ini` is awful! But the stdlib had `ConfigParser`. As of [PEP 680](https://peps.python.org/pep-0680/) in Jan 2022, `tomllib` is part of the standard library. This goes nicely with `PEP 621` which defined the standard packaging metadata format in `pyproject.toml`.
+
+
+#### Building and installing poetry packages
+
+Build a package:
+
+1. fill out `pyproject.toml`; set the `build-backend`
+2. `pipx --spec build --wheel --sdist ./path/to/package`
+
+You can also just install the package as normal with:
+
+1. `pip install ./path/to/package/[some,extras]`
+
+So cool! The end users are completely unaffected by the fact that our build backend might be poetry.
+
+### Canary deployments
+
+AWS has a [canary deployment with CDK workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/5195ab7c-5ded-4ee2-a1c5-775300717f42/en-US). 
+
+### Metrics
+
+- We can log metrics to the console. We can also send metrics to the otel collector. The otel collector then
+  logs the metrics to the console, but in EMF format (since that's what the awsemf exporter does).
+
+
+Code emits metric -> otlp collector -> prometheus, console, cloudwatch log stream in EMF format
+Code emits trace -> otlp collector -> x-ray, console
+Code emits log -> otlp collector -> cloudwatch log group
+
+The use should be walked through how the OTLP collector works. It uses
+
+- receivers
+- processors
+- exporters
+- services
+- extensions
+
+^^^ Great (official) [docs on all this](https://opentelemetry.io/docs/collector/configuration/)
+
+- It can support multiple backends for each
+  - metrics: prometheus
+  - traces: x-ray, jaeger, zipkin, tempo
+  - logs: cloudwatch, splunk, elastic, kafka, file, loki.
+- Logs also use the docker log driver. Where does that fit in? Does a OTEL log driver
+  have to batch logs at the service? Maybe logs don't need to be send to the OTLP collector.
+  As long as the logs have the trace IDs, they can be correlated in the final destination.
+- If EMF format is used for metrics, maybe we don't have to send metrics to the OTLP collecor...
+  except, if we use the opentelemetry SDK, our metrics are probably in OTLP format (somehow), not EMF,
+  so they would need to be sent to the OTLP collector to then be "exported" in the right format
+
+Lambda extensions
+- This [ADOT Lambda design spec](https://github.com/open-telemetry/opentelemetry-lambda/blob/main/docs/design_proposal.md) shows
+  that the ADOT lambda extension is literally the OTLP collector running as a separate process inside of the lambda container.
+  So your function executes alongside it and proactively sends metrics to it.
+- This is [the blogpost announcing Lambda extensions](https://aws.amazon.com/blogs/aws/getting-started-with-using-your-favorite-operational-tools-on-aws-lambda-extensions-are-now-generally-available/). NewRelic, DataDog, and ADOT are all here.
+- Lambda extensions make your functions more expensive. The [Lambda pricing page](https://aws.amazon.com/lambda/pricing/) has this callout:
+
+  > Duration charges apply to code that runs in the handler of a function as well as initialization code that is declared outside of the handler. For Lambda functions with AWS Lambda Extensions, duration also includes the time it takes for code in the last running extension to finish executing during shutdown phase. For more details, see the Lambda Programming Model documentation.
+
+  So it's not as though the extension is doubling the cost of the function. It may it some cases. You only pay for time
+  it takes for the extension to shut down, since the lambda runtime can't stop until your code and all extensions have stopped. 
+  Hopefully that's not too long.
+
+### Not covered
+
+If you want to learn more about:
+
+- Docker
+- FastAPI
+- git/GitHub/GitHub Actions
+- AWS
+- CloudFormation
+- Linux/bash
+
+Take additional courses on them and/or *build something*. This course will explain the way we use these things
+enough to give context. A beginner should be able to follow along line-by-line and understand the role each tool
+plays, but this course won't be a deep dive on those topics.
+
+Expect this course to deep dive on:
+
+- Concepts of deploying and monitoring production software
+- 
+
 ### Course Announcement
 
 Potential name: "Foundations for MLOps on AWS: deploying and managing software in production"
-
-
 
 Target audience: people who know Python and would like to learn how to "ship" production software using AWS.
 
